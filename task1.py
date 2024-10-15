@@ -2,7 +2,7 @@ from pprint import pprint
 from DbConnector import DbConnector
 
 
-class ExampleProgram:
+class Task_1_Program:
 
     def __init__(self):
         self.connection = DbConnector()
@@ -53,23 +53,19 @@ class ExampleProgram:
 
         
     def show_coll(self):
-        collections = self.client['test'].list_collection_names()
+        collections = self.client['group13_ex3'].list_collection_names()
         print(collections)
-         
+
 
 
 def main():
     program = None
     try:
-        program = ExampleProgram()
-        program.create_coll(collection_name="Person")
-        program.show_coll()
-        program.insert_documents(collection_name="Person")
-        program.fetch_documents(collection_name="Person")
-        program.drop_coll(collection_name="Person")
-        # program.drop_coll(collection_name='person')
-        # program.drop_coll(collection_name='users')
-        # Check that the table is dropped
+        program = Task_1_Program()
+        # program.create_coll('User')
+        # program.create_coll('Activity')
+        # program.create_coll('TrackPoint')
+
         program.show_coll()
     except Exception as e:
         print("ERROR: Failed to use database:", e)
