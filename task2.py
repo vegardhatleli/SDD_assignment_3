@@ -4,6 +4,7 @@ from pymongo import MongoClient
 from datetime import datetime
 from haversine import haversine, Unit  # Import haversine from the library
 from tabulate import tabulate
+from collections import defaultdict
 
 class Task_2_Program:
 
@@ -215,8 +216,52 @@ class Task_2_Program:
         print(f"Total distance walked by user 112 in 2008: {round(total_distance,2)} km")
         return total_distance
 
+    def get_most_used_transportation_mode(self):
+            print("Finding users with their most used transportation mode...")
 
-    
+            # MongoDB Aggregation Query
+            pipeline = [
+                {"$match": {"transportation_mode": {"$ne": None}}},  # Filter out documents with null transportation_mode
+                {
+                    "$group": {
+                        "_id": {
+                            "user_id": "$user_id",
+                            "transportation_mode": "$transportation_mode"
+                        },
+                        "mode_count": {"$sum": 1}  # Count occurrences of each transportation_mode per user
+                    }
+                },
+                {
+                    "$sort": {
+                        "_id.user_id": 1,  # Sort by user_id (ascending)
+                        "mode_count": -1    # Sort by mode_count (descending) for each user
+                    }
+                }
+            ]
+
+            result = self.db['Activity'].aggregate(pipeline)
+            
+            most_used_modes = defaultdict(lambda: (None, 0))  # Dictionary to store most used modes for each user
+
+            # Process the aggregated results
+            for doc in result:
+                user_id = doc['_id']['user_id']
+                transportation_mode = doc['_id']['transportation_mode']
+                mode_count = doc['mode_count']
+                
+                # Update the dictionary with the mode that has the highest count for each user
+                if mode_count > most_used_modes[user_id][1]:
+                    most_used_modes[user_id] = (transportation_mode, mode_count)
+            
+            # Display results in a table format
+            if most_used_modes:
+                table_data = [[user_id, mode] for user_id, (mode, _) in sorted(most_used_modes.items())]
+                table = tabulate(table_data, headers=["User ID", "Most Used Transportation Mode"], tablefmt="pretty")
+                print("\nMost used transportation modes per user:")
+                print(table)
+            else:
+                print("No transportation mode data available.")
+
 def main():
     program = None
     try:
