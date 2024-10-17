@@ -41,11 +41,9 @@ class Task_1_Program:
 
 
     def insert_activities(self, base_dir):
-        # Iterate through file structure 
         for root, dirs, files in os.walk(base_dir):
             if 'Trajectory' in dirs:
                 user_id = os.path.basename(root)
-                
                 labels = {}
                 labels_file_path = os.path.join(root, 'labels.txt')
                 
@@ -57,7 +55,7 @@ class Task_1_Program:
                             start_time = datetime.strptime(start_time_str, "%Y/%m/%d %H:%M:%S")
                             end_time = datetime.strptime(end_time_str, "%Y/%m/%d %H:%M:%S")
                             labels[(start_time, end_time)] = transportation_mode
-                
+
                 trajectory_folder = os.path.join(root, 'Trajectory')
                 activity_docs = []
 
@@ -89,7 +87,8 @@ class Task_1_Program:
                                     "user_id": user_id,
                                     "transportation_mode": transportation_mode,
                                     "start_date_time": start_date_time,
-                                    "end_date_time": end_date_time
+                                    "end_date_time": end_date_time,
+                                    "trackpoint_ids": []  # Initialize as an empty list
                                 })
                 
                 if activity_docs:
@@ -97,9 +96,10 @@ class Task_1_Program:
                     print(f"Inserted {len(activity_docs)} activities for user {user_id}.")
 
 
+
     def insert_trackpoints(self, base_dir):
-        batch_size = 10000
-        file_count = 0
+        batch_size = 10000  # Number of trackpoints to insert in each batch
+        file_count = 0  # Counter to track number of files processed
 
         for root, dirs, files in os.walk(base_dir):
             if 'Trajectory' in dirs:
@@ -114,9 +114,10 @@ class Task_1_Program:
                         lines = file.readlines()
                         line_count = len(lines)
 
-                        if line_count - 6 <= 2500:
+                        if line_count - 6 <= 2500:  # Process only files with <= 2500 data lines
                             print(f"Processing file: {file_name} for user: {user_id}")
-                            trackpoint_docs = []
+                            trackpoint_docs = []  # Trackpoints batch for this file
+                            trackpoint_ids = []  # List to store inserted trackpoint IDs
 
                             for line in lines[6:]:
                                 data = line.strip().split(',')
@@ -127,27 +128,41 @@ class Task_1_Program:
                                 date_time_str = data[5] + ' ' + data[6]
                                 date_time = datetime.strptime(date_time_str, "%Y-%m-%d %H:%M:%S")
 
-                                trackpoint_docs.append({
+                                # Prepare the trackpoint document
+                                trackpoint_doc = {
                                     "activity_id": activity_id,
                                     "lat": latitude,
                                     "lon": longitude,
                                     "altitude": altitude,
                                     "date_days": date_days,
                                     "date_time": date_time
-                                })
+                                }
+                                trackpoint_docs.append(trackpoint_doc)
 
+                                # If batch size is reached, insert the batch
                                 if len(trackpoint_docs) >= batch_size:
-                                    self.db['TrackPoint'].insert_many(trackpoint_docs)
+                                    result = self.db['TrackPoint'].insert_many(trackpoint_docs)
+                                    trackpoint_ids.extend(result.inserted_ids)  # Collect the inserted IDs
                                     print(f"Inserting batch of {len(trackpoint_docs)} trackpoints...")
-                                    trackpoint_docs.clear()
+                                    trackpoint_docs.clear()  # Clear the batch after insertion
 
+                            # Insert any remaining trackpoints after file processing
                             if trackpoint_docs:
-                                self.db['TrackPoint'].insert_many(trackpoint_docs)
+                                result = self.db['TrackPoint'].insert_many(trackpoint_docs)
+                                trackpoint_ids.extend(result.inserted_ids)
                                 print(f"Inserting final batch of {len(trackpoint_docs)} trackpoints...")
+
+                            # Update the activity document with the list of trackpoint_ids
+                            self.db['Activity'].update_one(
+                                {"_id": activity_id},
+                                {"$push": {"trackpoint_ids": {"$each": trackpoint_ids}}}  # Push all trackpoint_ids at once
+                            )
 
                             file_count += 1
 
         print(f"Finished processing {file_count} files.")
+
+
 
 
     def fetch_documents(self, collection_name):
@@ -179,15 +194,15 @@ def main():
     program = None
     try:
         program = Task_1_Program()
-        # program.create_coll('User')
-        # program.create_coll('Activity')
-        # program.create_coll('TrackPoint')
+        #program.create_coll('User')
+        #program.create_coll('Activity')
+        #program.create_coll('TrackPoint')
         program.show_coll()
-        #program.insert_activities(base_dir="dataset/dataset/Data")
-        program.insert_trackpoints(base_dir="dataset/dataset/Data")
-        #program.empty_collection('TrackPoint')
-        #program.list_all_users()
         #program.insert_users(base_dir="dataset/dataset/Data", labeled_ids_file="dataset/dataset/labeled_ids.txt")
+        #program.insert_activities(base_dir="dataset/dataset/Data")
+        #program.insert_trackpoints(base_dir="dataset/dataset/Data")
+        #program.empty_collection('Activity')
+        #program.list_all_users()
 
     except Exception as e:
         print("ERROR: Failed to use database:", e)
