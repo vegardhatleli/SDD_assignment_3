@@ -163,7 +163,18 @@ class Task_1_Program:
         print(f"Finished processing {file_count} files.")
 
 
+    def create_indexes(self):
+        # Indexes for the 'Activity' collection
+        self.db['Activity'].create_index('user_id')
+        self.db['Activity'].create_index('transportation_mode')
+        self.db['Activity'].create_index([('start_date_time', 1), ('end_date_time', 1)])
 
+        # Indexes for the 'TrackPoint' collection
+        self.db['TrackPoint'].create_index('activity_id')
+        self.db['TrackPoint'].create_index([('lat', 1), ('lon', 1)])  # Index for geographical coordinates
+        self.db['TrackPoint'].create_index('date_time')  # Index for querying by date and time
+
+        print("Indexes created successfully.")
 
     def fetch_documents(self, collection_name):
         collection = self.db[collection_name]
@@ -194,16 +205,16 @@ def main():
     program = None
     try:
         program = Task_1_Program()
-        #program.create_coll('User')
-        #program.create_coll('Activity')
-        #program.create_coll('TrackPoint')
+        program.create_coll('User')
+        program.create_coll('Activity')
+        program.create_coll('TrackPoint')
         program.show_coll()
-        #program.insert_users(base_dir="dataset/dataset/Data", labeled_ids_file="dataset/dataset/labeled_ids.txt")
-        #program.insert_activities(base_dir="dataset/dataset/Data")
-        #program.insert_trackpoints(base_dir="dataset/dataset/Data")
+        program.insert_users(base_dir="dataset/dataset/Data", labeled_ids_file="dataset/dataset/labeled_ids.txt")
+        program.insert_activities(base_dir="dataset/dataset/Data")
+        program.insert_trackpoints(base_dir="dataset/dataset/Data")
         #program.empty_collection('Activity')
         #program.list_all_users()
-
+        program.create_indexes()
     except Exception as e:
         print("ERROR: Failed to use database:", e)
     finally:

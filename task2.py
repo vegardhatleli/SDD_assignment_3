@@ -5,6 +5,7 @@ from datetime import datetime
 from haversine import haversine, Unit  # Import haversine from the library
 from tabulate import tabulate
 from collections import defaultdict
+from tqdm import tqdm
 
 class Task_2_Program:
 
@@ -262,6 +263,44 @@ class Task_2_Program:
             else:
                 print("No transportation mode data available.")
 
+    def top_20_users_by_altitude_gain(self):
+        # Dictionary to store altitude gains for each user
+        user_altitude_gain = {}
+
+        # Fetch activities where trackpoints are available (ignore activities without trackpoints)
+        activities = self.db['Activity'].find({'trackpoint_ids': {'$exists': True, '$not': {'$size': 0}}})
+
+        # Process each activity
+        for activity in tqdm(activities, desc="Processing activities", unit="activity"):
+            user_id = activity['user_id']
+            trackpoint_ids = activity['trackpoint_ids']
+
+            # Retrieve all trackpoints for this activity in a sorted order
+            trackpoints = list(self.db['TrackPoint'].find({'_id': {'$in': trackpoint_ids}}).sort('date_time', 1))
+
+            # Iterate through trackpoints and compute altitude gains
+            for i in range(1, len(trackpoints)):
+                current_altitude = trackpoints[i]['altitude']
+                previous_altitude = trackpoints[i - 1]['altitude']
+
+                # Check if altitude is valid and increasing
+                if current_altitude != -777 and current_altitude > previous_altitude:
+                    altitude_gain = (current_altitude - previous_altitude) * 0.3048  # Convert feet to meters
+                    if user_id in user_altitude_gain:
+                        user_altitude_gain[user_id] += altitude_gain
+                    else:
+                        user_altitude_gain[user_id] = altitude_gain
+
+        # Sort the users by total altitude gain and take the top 20
+        top_20_users = sorted(user_altitude_gain.items(), key=lambda x: x[1], reverse=True)[:20]
+
+        # Display the results
+        if top_20_users:
+            print("Top 20 Users by Altitude Gain (User ID, Total Meters Gained):")
+            print(tabulate(top_20_users, headers=["User ID", "Total Meters Gained"], tablefmt="grid"))
+        else:
+            print("No altitude data found.")
+
 def main():
     program = None
     try:
@@ -269,7 +308,7 @@ def main():
         
         # Show collections
         program.show_collections()
-
+        '''
         #Count users, activities, and trackpoints
         user_count, activity_count, trackpoint_count = program.count_users_activities_trackpoints()
         print(f"User Count: {user_count}, Activity Count: {activity_count}, TrackPoint Count: {trackpoint_count}")
@@ -280,7 +319,8 @@ def main():
         program.count_transportation_modes()
         program.find_year_with_most_activities_and_hours()
         program.distance_walked()
-
+        '''
+        program.top_20_users_by_altitude_gain()
     except Exception as e:
         print("ERROR: Failed to use database:", e)
     finally:
