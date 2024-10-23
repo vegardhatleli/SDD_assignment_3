@@ -301,6 +301,49 @@ class Task_2_Program:
         else:
             print("No altitude data found.")
 
+
+    def find_users_in_forbidden_city(self):
+        # Exact coordinates for the Forbidden City
+        forbidden_city_lat = 39.916
+        forbidden_city_lon = 116.397
+        tolerance = 0.001  # Adjust tolerance as necessary
+
+        # Define the latitude and longitude range for the forbidden city with tolerance
+        lat_min = forbidden_city_lat
+        lat_max = forbidden_city_lat + tolerance
+        lon_min = forbidden_city_lon
+        lon_max = forbidden_city_lon + tolerance
+
+        # Step 1: Find trackpoints within the latitude/longitude range
+        matching_trackpoints = self.db['TrackPoint'].find({
+            "lat": {"$gte": lat_min, "$lte": lat_max},
+            "lon": {"$gte": lon_min, "$lte": lon_max}
+        }, {"_id": 1})  # Only return trackpoint ids
+
+        # Step 2: Extract the trackpoint ids
+        trackpoint_ids = [tp['_id'] for tp in matching_trackpoints]
+
+        if not trackpoint_ids:
+            print("No trackpoints found within the Forbidden City area.")
+            return
+
+        # Step 3: Find activities that include these trackpoint ids
+        activities_with_matching_trackpoints = self.db['Activity'].find({
+            "trackpoint_ids": {"$in": trackpoint_ids}
+        }, {"user_id": 1})  # Only return user ids
+
+        # Step 4: Extract distinct user IDs
+        user_ids = {activity['user_id'] for activity in activities_with_matching_trackpoints}
+
+        # Step 5: Output the result
+        if user_ids:
+            print("Users who have tracked an activity in the Forbidden City (with tolerance):")
+            for user_id in user_ids:
+                print(f"User ID: {user_id}")
+        else:
+            print("No users found who have tracked an activity in the Forbidden City.")
+
+
 def main():
     program = None
     try:
@@ -320,7 +363,8 @@ def main():
         program.find_year_with_most_activities_and_hours()
         program.distance_walked()
         '''
-        program.top_20_users_by_altitude_gain()
+        #program.top_20_users_by_altitude_gain()
+        program.find_users_in_forbidden_city()
     except Exception as e:
         print("ERROR: Failed to use database:", e)
     finally:
