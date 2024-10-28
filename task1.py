@@ -31,7 +31,7 @@ class Task_1_Program:
                 is_labeled = user_id in labeled_ids
                 
                 user_docs.append({
-                    "_id": user_id,  # Use user_id as the _id field
+                    "_id": user_id, 
                     "is_labeled": is_labeled
                 })
         
@@ -83,12 +83,12 @@ class Task_1_Program:
                                         break
                                 
                                 activity_docs.append({
-                                    "_id": int(plt_file.split('.')[0] + user_id),  # Unique ID for activity
+                                    "_id": int(plt_file.split('.')[0] + user_id),  
                                     "user_id": user_id,
                                     "transportation_mode": transportation_mode,
                                     "start_date_time": start_date_time,
                                     "end_date_time": end_date_time,
-                                    "trackpoint_ids": []  # Initialize as an empty list
+                                    "trackpoint_ids": [] 
                                 })
                 
                 if activity_docs:
@@ -98,8 +98,8 @@ class Task_1_Program:
 
 
     def insert_trackpoints(self, base_dir):
-        batch_size = 10000  # Number of trackpoints to insert in each batch
-        file_count = 0  # Counter to track number of files processed
+        batch_size = 10000  
+        file_count = 0  
 
         for root, dirs, files in os.walk(base_dir):
             if 'Trajectory' in dirs:
@@ -116,8 +116,8 @@ class Task_1_Program:
 
                         if line_count - 6 <= 2500:  # Process only files with <= 2500 data lines
                             print(f"Processing file: {file_name} for user: {user_id}")
-                            trackpoint_docs = []  # Trackpoints batch for this file
-                            trackpoint_ids = []  # List to store inserted trackpoint IDs
+                            trackpoint_docs = []  
+                            trackpoint_ids = []  
 
                             for line in lines[6:]:
                                 data = line.strip().split(',')
@@ -128,7 +128,7 @@ class Task_1_Program:
                                 date_time_str = data[5] + ' ' + data[6]
                                 date_time = datetime.strptime(date_time_str, "%Y-%m-%d %H:%M:%S")
 
-                                # Prepare the trackpoint document
+                                
                                 trackpoint_doc = {
                                     "activity_id": activity_id,
                                     "lat": latitude,
@@ -139,23 +139,23 @@ class Task_1_Program:
                                 }
                                 trackpoint_docs.append(trackpoint_doc)
 
-                                # If batch size is reached, insert the batch
+                                
                                 if len(trackpoint_docs) >= batch_size:
                                     result = self.db['TrackPoint'].insert_many(trackpoint_docs)
-                                    trackpoint_ids.extend(result.inserted_ids)  # Collect the inserted IDs
+                                    trackpoint_ids.extend(result.inserted_ids)
                                     print(f"Inserting batch of {len(trackpoint_docs)} trackpoints...")
-                                    trackpoint_docs.clear()  # Clear the batch after insertion
+                                    trackpoint_docs.clear() 
 
-                            # Insert any remaining trackpoints after file processing
+                            
                             if trackpoint_docs:
                                 result = self.db['TrackPoint'].insert_many(trackpoint_docs)
                                 trackpoint_ids.extend(result.inserted_ids)
                                 print(f"Inserting final batch of {len(trackpoint_docs)} trackpoints...")
 
-                            # Update the activity document with the list of trackpoint_ids
+                            
                             self.db['Activity'].update_one(
                                 {"_id": activity_id},
-                                {"$push": {"trackpoint_ids": {"$each": trackpoint_ids}}}  # Push all trackpoint_ids at once
+                                {"$push": {"trackpoint_ids": {"$each": trackpoint_ids}}} 
                             )
 
                             file_count += 1
@@ -164,15 +164,15 @@ class Task_1_Program:
 
 
     def create_indexes(self):
-        # Indexes for the 'Activity' collection
+        
         self.db['Activity'].create_index('user_id')
         self.db['Activity'].create_index('transportation_mode')
         self.db['Activity'].create_index([('start_date_time', 1), ('end_date_time', 1)])
 
-        # Indexes for the 'TrackPoint' collection
+        
         self.db['TrackPoint'].create_index('activity_id')
-        self.db['TrackPoint'].create_index([('lat', 1), ('lon', 1)])  # Index for geographical coordinates
-        self.db['TrackPoint'].create_index('date_time')  # Index for querying by date and time
+        self.db['TrackPoint'].create_index([('lat', 1), ('lon', 1)]) 
+        self.db['TrackPoint'].create_index('date_time') 
 
         print("Indexes created successfully.")
 
@@ -198,7 +198,7 @@ class Task_1_Program:
             print(user)
 
     def empty_collection(self, collectionName):
-        self.db[collectionName].delete_many({}) # Sett inn navn på database du ønsker å tømme
+        self.db[collectionName].delete_many({})
         print(f"All {collectionName} have been deleted from the collection.")
 
 def main():
