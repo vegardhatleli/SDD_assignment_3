@@ -271,44 +271,36 @@ class Task_2_Program:
 
 
     def find_users_with_invalid_activities(self):
-        # Dictionary to store invalid activity counts per user
         invalid_activities_per_user = {}
 
-        # Fetch all activities that have trackpoints
         activities = self.db['Activity'].find({'trackpoint_ids': {'$exists': True, '$not': {'$size': 0}}})
 
-        # Iterate through the activities
         for activity in activities:
             user_id = activity['user_id']
             activity_id = activity['_id']
             trackpoint_ids = activity['trackpoint_ids']
 
-            # Retrieve trackpoints for this activity sorted by date_time
             trackpoints = list(self.db['TrackPoint'].find({'_id': {'$in': trackpoint_ids}}).sort('date_time', 1))
 
             previous_trackpoint_time = None
             invalid_activity_found = False
 
-            # Iterate through the trackpoints to find invalid ones
             for trackpoint in trackpoints:
                 trackpoint_time = trackpoint['date_time']
 
                 if previous_trackpoint_time:
-                    # Calculate time difference between consecutive trackpoints in minutes
                     time_diff = (trackpoint_time - previous_trackpoint_time).total_seconds() / 60.0
 
                     if time_diff >= 5:
-                        invalid_activity_found = True  # Mark this activity as invalid
+                        invalid_activity_found = True  
 
                 previous_trackpoint_time = trackpoint_time
 
-            # If an invalid activity is found, count it for the user
             if invalid_activity_found:
                 if user_id not in invalid_activities_per_user:
                     invalid_activities_per_user[user_id] = 0
                 invalid_activities_per_user[user_id] += 1
 
-        # If invalid activities are found, display the results
         if invalid_activities_per_user:
             table_data = [[user_id, count] for user_id, count in sorted(invalid_activities_per_user.items(), key=lambda x: x[1], reverse=True)]
             table = tabulate(table_data, headers=["User ID", "Invalid Activity Count"], tablefmt="pretty")
@@ -357,10 +349,7 @@ def main():
     try:
         program = Task_2_Program()
         
-        # Show collections
         program.show_collections()
-        '''
-        #Count users, activities, and trackpoints
         user_count, activity_count, trackpoint_count = program.count_users_activities_trackpoints()
         print(f"User Count: {user_count}, Activity Count: {activity_count}, TrackPoint Count: {trackpoint_count}")
         average = program.avg_activities_per_user()
@@ -370,9 +359,10 @@ def main():
         program.count_transportation_modes()
         program.find_year_with_most_activities_and_hours()
         program.distance_walked()
-        '''
-        #program.top_20_users_by_altitude_gain()
-        #program.find_users_in_forbidden_city()
+        program.top_20_users_by_altitude_gain()
+        program.find_users_with_invalid_activities()
+        program.find_users_in_forbidden_city()
+        program.get_most_used_transportation_mode()
     except Exception as e:
         print("ERROR: Failed to use database:", e)
     finally:
